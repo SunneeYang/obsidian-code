@@ -1,7 +1,7 @@
 ---
 name: obsidian-session
 description: 保存当前 Claude Code 会话摘要到 Obsidian 仓库，使用组织化的文件夹结构。支持中文标题和标签，可按任务拆分为多个文档。集成 Templater、Tasks、Dataview 插件功能。
-allowed_tools: ["Bash"]
+allowed_tools: ["Bash", "AskUserQuestion"]
 ---
 
 # /obsidian-session - 保存会话到 Obsidian
@@ -19,12 +19,13 @@ allowed_tools: ["Bash"]
 
 1. **分析会话内容** - 提取关键问题、解决方案、决策和成果
 2. **识别独立任务** - 判断是否应拆分为多个文档
-3. **生成结构化笔记** - 使用标准化的模板组织内容
-4. **保存到 Obsidian** - 按日期组织文件夹：`Claude Code/YYYY-MM-DD/`
-5. **添加元数据** - 包含标签、日期、状态和相关文件
-6. **Wikilinks 支持** - 自动将文件引用转换为 wikilinks 格式
-7. **任务管理** - 集成 Tasks 插件语法
-8. **数据查询** - 支持 Dataview 查询和索引
+3. **用户确认拆分** - 通过多选界面让用户确认或修改任务拆分
+4. **生成结构化笔记** - 使用标准化的模板组织内容
+5. **保存到 Obsidian** - 按日期组织文件夹：`Claude Code/YYYY-MM-DD/`
+6. **添加元数据** - 包含标签、日期、状态和相关文件
+7. **Wikilinks 支持** - 自动将文件引用转换为 wikilinks 格式
+8. **任务管理** - 集成 Tasks 插件语法
+9. **数据查询** - 支持 Dataview 查询和索引
 
 ## 技术实现
 
@@ -356,6 +357,92 @@ related_tasks:
 ✅ 实现 Auxiliary 组队 buff
 ✅ 优化技能文档格式
 \`\`\`
+
+### 步骤 3.5: 用户确认拆分（交互式）
+
+在生成标题后，使用 `AskUserQuestion` 工具向用户展示拆分结果，允许用户确认、修改或合并任务。
+
+**使用 AskUserQuestion 工具**：
+
+```json
+{
+  "questions": [
+    {
+      "question": "检测到会话包含多个独立任务，请确认拆分结果是否正确？您可以修改任务名称（将作为文档标题），或选择合并为单个文档。",
+      "header": "确认任务拆分",
+      "multiSelect": true,
+      "options": [
+        {
+          "label": "任务1: 修复跨服务缓存一致性",
+          "description": "涉及 Redis 缓存同步和消息队列"
+        },
+        {
+          "label": "任务2: 实现 Auxiliary 组队 buff",
+          "description": "新增游戏机制和属性计算"
+        }
+      ]
+    }
+  ]
+}
+```
+
+**用户响应处理**：
+
+| 用户选择 | 行为 |
+|---------|------|
+| **选中所有任务** | 按原计划创建多个文档 |
+| **只选部分任务** | 仅创建选中的任务文档 |
+| **选择"其他"并输入** | 使用用户输入的标题替代原建议 |
+| **未选择任何选项** | 询问用户是否要合并为单个文档 |
+
+**用户修改标题示例**：
+
+```
+用户选择"其他"并输入：
+- "修复 Redis 缓存一致性问题"（替代"修复跨服务缓存一致性"）
+- "添加组队 buff 功能"（替代"实现 Auxiliary 组队 buff"）
+```
+
+**实现代码示例**：
+
+```python
+# 伪代码示例
+tasks = analyze_session(conversation)
+titles = [task.title for task in tasks]
+
+response = await AskUserQuestion(
+    questions=[{
+        "question": "会话分析完成，检测到以下独立任务。请确认要创建哪些文档？您可以选择多个，或在'其他'中修改标题。",
+        "header": "确认文档创建",
+        "multiSelect": True,
+        "options": [
+            {"label": title, "description": task.brief}
+            for task in tasks
+        ] + [
+            {"label": "合并为单个文档", "description": "将所有任务合并到一个文档中"}
+        ]
+    }]
+)
+
+confirmed_tasks = process_user_response(response, tasks)
+```
+
+**特殊场景处理**：
+
+1. **用户选择"合并为单个文档"**：
+   - 综合所有任务内容生成单一文档
+   - 标题使用最突出的任务或通用描述
+   - 在 frontmatter 中使用 `related_tasks` 列出所有任务
+
+2. **用户修改标题**：
+   - 使用用户输入的新标题
+   - 保持原有的任务内容和结构
+   - 检查标题是否符合规范（2-8个字）
+
+3. **用户取消操作**：
+   - 不创建任何文档
+   - 询问用户是否需要重新分析
+   - 或允许用户提供自定义标题
 
 ### 步骤 4: 创建笔记结构
 
