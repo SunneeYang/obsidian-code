@@ -1,0 +1,19 @@
+{
+  "name": "obsidian-vault-organizer",
+  "version": "1.0.1",
+  "description": "整理 Obsidian 知识库的技能，包括梳理链接关系、整理标签、更新索引文档",
+  "author": "光",
+  "repository": "https://github.com/SunneeYang/obsidian-skills",
+  "keywords": ["obsidian", "organize", "vault", "cleanup", "claude-code"],
+  "allowed_tools": ["Bash", "Read", "Write", "Edit", "Glob", "Grep"],
+  "related_skills": [
+    "obsidian:obsidian-cli",
+    "obsidian:obsidian-markdown",
+    "obsidian:obsidian-bases",
+    "obsidian:json-canvas",
+    "obsidian-session"
+  ],
+  "files": [
+    "SKILL.md"
+  ]
+}
