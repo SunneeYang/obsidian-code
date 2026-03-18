@@ -1,0 +1,20 @@
+{
+  "name": "obsidian-skills",
+  "description": "Claude Code 技能市场 - Obsidian 集成工具集",
+  "owner": {
+    "name": "光",
+    "website": "https://github.com/SunneeYang"
+  },
+  "plugins": [
+    {
+      "name": "obsidian-session",
+      "description": "保存 Claude Code 会话摘要到 Obsidian 仓库。支持自动分析、任务拆分、标签分类，集成 Templater、Tasks、Dataview 插件。",
+      "version": "1.0.0",
+      "author": "光",
+      "repository": "https://github.com/SunneeYang/obsidian-skills",
+      "tags": ["obsidian", "session", "save", "documentation", "notes"],
+      "homepage": "https://github.com/SunneeYang/obsidian-skills#readme",
+      "documentation": "https://github.com/SunneeYang/obsidian-skills/blob/main/skills/obsidian-session/SKILL.md"
+    }
+  ]
+}

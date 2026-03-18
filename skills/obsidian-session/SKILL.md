@@ -1,0 +1,545 @@
+---
+name: obsidian-session
+description: 保存当前 Claude Code 会话摘要到 Obsidian 仓库，使用组织化的文件夹结构。支持中文标题和标签，可按任务拆分为多个文档。集成 Templater、Tasks、Dataview 插件功能。
+allowed_tools: ["Bash"]
+---
+
+# /obsidian-session - 保存会话到 Obsidian
+
+将当前 Claude Code 会话保存为格式化的笔记，存储在 Obsidian 仓库中，包含完整的上下文、决策和成果。如果会话包含多个独立任务，应拆分为多个文档。
+
+## 使用方法
+
+```bash
+/obsidian-session                                          # 自动分析并生成文档
+/obsidian-session 自定义标题                              # 使用自定义标题创建文档
+```
+
+## 功能说明
+
+1. **分析会话内容** - 提取关键问题、解决方案、决策和成果
+2. **识别独立任务** - 判断是否应拆分为多个文档
+3. **生成结构化笔记** - 使用标准化的模板组织内容
+4. **保存到 Obsidian** - 按日期组织文件夹：`Claude Code/YYYY-MM-DD/`
+5. **添加元数据** - 包含标签、日期、状态和相关文件
+6. **Wikilinks 支持** - 自动将文件引用转换为 wikilinks 格式
+7. **任务管理** - 集成 Tasks 插件语法
+8. **数据查询** - 支持 Dataview 查询和索引
+
+## 技术实现
+
+### Obsidian CLI 使用
+
+**设置默认 vault**（首次使用）：
+
+```bash
+# 使用 vault 名称设置默认
+obsidian-cli set-default obsidian
+# 验证配置
+obsidian-cli print-default
+# 输出：Default vault name: obsidian
+#      Default vault path: /Users/hortor/Documents/work/obsidian
+```
+
+### 创建笔记的方法
+
+#### 方法 1: 使用 obsidian-cli create（推荐）
+
+```bash
+# 创建笔记（使用相对路径）
+obsidian-cli create "Claude Code/2026-03-18/标题.md" --content "# 标题\n\n内容"
+
+# 创建并打开笔记
+obsidian-cli create "Claude Code/2026-03-18/标题.md" --content "内容" --open
+
+# 追加内容到现有笔记
+obsidian-cli create "Claude Code/现有文档.md" --content "追加的内容" --append
+```
+
+#### 方法 2: 使用 Templater 模板
+
+如果配置了 Templater 插件，可以使用模板创建：
+
+```bash
+# 先创建模板文件（如果不存在）
+obsidian-cli create "Templates/会话笔记模板.md" --content "模板内容..."
+
+# 使用模板创建笔记（需在 Obsidian 中操作）
+# 1. 打开 Obsidian
+# 2. 按 Ctrl/Cmd + P 打开命令面板
+# 3. 选择 "Templater: Create new note from template"
+# 4. 选择会话笔记模板
+```
+
+#### 方法 3: 使用 Bash 直接创建（适用于复杂内容）
+
+```bash
+# 创建文件夹
+mkdir -p "/Users/hortor/Documents/work/obsidian/Claude Code/2026-03-18"
+
+# 创建文件
+cat > "/Users/hortor/Documents/work/obsidian/Claude Code/2026-03-18/标题.md" << 'EOF'
+---
+title: 标题
+date: 2026-03-18
+tags:
+  - claude-session
+status: 已完成
+type: session-summary
+---
+
+# 标题
+
+## 摘要
+内容...
+EOF
+```
+
+### Obsidian CLI 常用命令
+
+| 命令 | 用途 | 示例 |
+|-----|------|------|
+| `create` | 创建笔记 | `obsidian-cli create "路径/文件.md" --content "内容"` |
+| `list` | 列出文件 | `obsidian-cli list "Claude Code"` |
+| `open` | 打开文件 | `obsidian-cli open "Claude Code/2026-03-18/标题.md"` |
+| `search` | 搜索文件 | `obsidian-cli search "标题"` |
+| `search-content` | 搜索内容 | `obsidian-cli search-content "关键词"` |
+| `frontmatter` | 管理属性 | `obsidian-cli frontmatter "标题" --print` |
+| `daily` | 创建/打开日记 | `obsidian-cli daily` |
+| `set-default` | 设置默认 vault | `obsidian-cli set-default obsidian` |
+| `print-default` | 查看默认配置 | `obsidian-cli print-default` |
+
+## 插件集成
+
+### Tasks 插件
+
+在会话笔记中添加任务列表，使用 Tasks 插件语法：
+
+```markdown
+## 任务列表
+
+- [ ] 分析当前问题
+- [/] 实现解决方案（进行中）
+- [x] 测试功能（已完成）
+- [- ] 已取消的任务
+```
+
+**任务状态符号**：
+- `[ ]` - Todo（待办）
+- `[/]` - In Progress（进行中）
+- `[x]` - Done（已完成）
+- `[- ]` - Cancelled（已取消）
+
+**任务元数据**（可选）：
+```markdown
+- [ ] 重要任务 ⏫ 📅 2026-03-20
+- [ ] 低优先级任务 🔽
+- [ ] 有截止日期的任务 📅 2026-03-25
+- [ ] 重复任务 🔁 every day
+```
+
+### Dataview 插件
+
+使用 Dataview 创建索引和查询：
+
+#### 创建索引页面
+
+```markdown
+---
+title: Claude Code 会话索引
+type: index
+---
+
+# Claude Code 会话索引
+
+## 按日期查询
+
+\`\`\`dataview
+TABLE date, status, tags
+FROM "Claude Code"
+WHERE type = "session-summary"
+SORT date DESC
+\`\`\`
+
+## 按标签分组
+
+\`\`\`dataview
+LIST
+FROM "Claude Code"
+WHERE type = "session-summary"
+GROUP BY tags
+SORT tags ASC
+\`\`\`
+
+## 统计信息
+
+\`\`\`dataview
+TABLE length(rows) as "文档数"
+FROM "Claude Code"
+WHERE type = "session-summary"
+GROUP BY date_format(date, "yyyy-MM")
+SORT date DESC
+\`\`\`
+```
+
+#### 常用查询示例
+
+\`\`\`dataview
+# 查询所有未完成的任务
+TASK
+FROM "Claude Code"
+WHERE !completed
+GROUP BY file.link
+
+# 查询特定标签的文档
+LIST
+FROM "Claude Code"
+WHERE contains(tags, "#bug修复")
+SORT date DESC
+
+# 查询最近7天的文档
+TABLE date, status
+FROM "Claude Code"
+WHERE date >= date(today) - dur(7 days)
+SORT date DESC
+\`\`\`
+
+### Templater 插件
+
+创建动态模板，自动生成内容。
+
+#### 模板文件位置
+
+技能模板目录：`~/.claude/skills/obsidian-session/templates/`
+
+包含文件：
+- `会话笔记模板.md` - 标准会话笔记模板
+
+#### 使用模板
+
+**步骤 1：复制模板到目标 vault**
+
+\`\`\`bash
+# 复制模板到当前 vault 的 Templates 目录
+cp ~/.claude/skills/obsidian-session/templates/会话笔记模板.md \
+   "$(pwd)/Templates/会话笔记模板.md"
+\`\`\`
+
+**步骤 2：在 Obsidian 中使用模板**
+
+1. 打开 Obsidian
+2. 按 `Ctrl/Cmd + P` 打开命令面板
+3. 选择 "Templater: Create new note from template"
+4. 选择 "会话笔记模板"
+
+#### 模板内容
+
+模板包含以下字段：
+- 自动生成的日期和时间戳
+- 光标位置标记（创建时光标自动定位）
+- Tasks 插件语法的任务列表
+- 标准化的 frontmatter 格式
+- 预定义的内容结构
+
+#### Templater 变量
+
+| 变量 | 说明 | 示例输出 |
+|-----|------|---------|
+| `<% tp.date.now() %>` | 当前日期时间 | 2026-03-18 10:30:00 |
+| `<% tp.date.now('YYYY-MM-DD') %>` | 格式化日期 | 2026-03-18 |
+| `<% tp.file.title %>` | 文件标题 | 标题 |
+| `<% tp.file.cursor() %>` | 光标位置 | （光标在此处） |
+| `<% tp.system.clipboard() %>` | 剪贴板内容 | （剪贴板文本） |
+
+## 多任务拆分规则
+
+### 何时拆分为多个文档？
+
+**自动拆分条件**（满足任一即应拆分）：
+
+| 条件 | 说明 | 示例 |
+|-----|------|------|
+| **多个 Git 提交** | 不同的 commit 表示不同的任务 | commit 1: 修复bug<br>commit 2: 新功能 |
+| **不同功能模块** | 涉及不同的代码模块或系统 | 模块A: 用户系统<br>模块B: 支付系统 |
+| **明确的任务切换** | 用户明确切换到新任务 | "现在做X"<br>"接下来做Y" |
+| **时间间隔明显** | 两个任务之间有较长时间间隔 | 上午：修复缓存<br>下午：实现 buff |
+| **独立的 bug 修复** | 每个 bug 修复都是独立的任务 | bug1: 登录失败<br>bug2: 支付异常 |
+
+**合并为单个文档**（同时满足）：
+
+- 任务之间有强依赖关系
+- 属于同一个功能的连续迭代
+- 文档内容较少（< 50行）
+
+### 文件组织结构
+
+**单个任务时**：
+
+\`\`\`
+Claude Code/2026-03-18/
+└── 优化数据库查询性能.md
+\`\`\`
+
+**多个任务时**：
+
+\`\`\`
+Claude Code/2026-03-18/
+├── 修复跨服务缓存一致性.md
+├── 实现 Auxiliary 组队 buff.md
+└── 优化 obsidian-session 技能文档.md
+\`\`\`
+
+### 任务间关联
+
+使用 frontmatter 中的 `related_tasks` 字段链接相关任务：
+
+\`\`\`yaml
+---
+title: 实现 Auxiliary 组队 buff
+date: 2026-03-18
+related_tasks:
+  - 修复跨服务缓存一致性
+---
+\`\`\`
+
+在文档末尾添加相关任务链接：
+
+\`\`\`markdown
+## 相关
+- 相关任务: [[修复跨服务缓存一致性]]
+- 前置任务: [[优化角色属性计算]]
+- 后续任务: [[添加更多 Auxiliary 类型]]
+\`\`\`
+
+## 会话分析流程
+
+### 步骤 1: 识别关键信息
+
+从对话历史中提取：
+
+| 信息类型 | 提取方法 |
+|---------|---------|
+| **主要问题** | 识别用户提出的初始问题或任务 |
+| **解决方案** | 分析实施的步骤和代码更改 |
+| **关键决策** | 记录重要的技术决策和原因 |
+| **修改文件** | 收集所有更改的文件路径 |
+| **成果** | 总结具体的结果和影响 |
+| **提交记录** | 收集所有 Git commit |
+
+### 步骤 2: 判断是否拆分
+
+分析任务边界的信号：
+
+\`\`\`
+任务切换信号：
+├── Git 提交 → "已推送"、"commit 成功"
+├── 用户明确指示 → "现在做X"、"接下来"
+├── 主题变化 → 从模块A切换到模块B
+└── 时间间隔 → 长时间无活动
+\`\`\`
+
+### 步骤 3: 生成标题
+
+**标题原则**：
+- 使用简练的中文（2-8个字）
+- 突出核心问题或成果
+- 使用动词开头（如"修复"、"实现"、"优化"）
+- 每个任务独立标题
+
+**示例标题**：
+\`\`\`
+✅ 修复身份验证中间件
+✅ 实现用户仪表板
+✅ 优化数据库查询
+✅ 配置 Obsidian 集成
+✅ 修复跨服务缓存一致性
+✅ 实现 Auxiliary 组队 buff
+✅ 优化技能文档格式
+\`\`\`
+
+### 步骤 4: 创建笔记结构
+
+使用以下模板：
+
+\`\`\`markdown
+---
+title: {生成的标题}
+date: {YYYY-MM-DD}
+tags:
+  - claude-session
+  - {分类标签}
+status: {已完成|进行中}
+type: session-summary
+related_tasks: [{相关任务标题}]
+---
+
+# {生成的标题}
+
+## 摘要
+{2-3句话概述完成的工作}
+
+## 问题 / 任务
+{最初的请求或问题是什么？}
+
+## 解决方案
+{采取的关键步骤、做出的决策、编写的代码}
+
+## 关键成果
+- {成果 1}
+- {成果 2}
+- {成果 3}
+
+## 任务列表
+- [ ] 待完成任务
+- [/] 进行中任务
+- [x] 已完成任务
+
+## 修改的文件
+{列出更改的文件: [[file1.md]], [[file2.py]] 等}
+
+## 相关
+- Git commit: {commit-id}
+- 相关任务: [[{相关任务文档}]]
+\`\`\`
+
+### 步骤 5: 保存到 Obsidian
+
+**推荐使用 obsidian-cli create**：
+
+\`\`\`bash
+#!/bin/bash
+# 设置变量
+TITLE="标题"
+DATE=$(date +%Y-%m-%d)
+CONTENT="---
+title: $TITLE
+date: $DATE
+tags:
+  - claude-session
+status: 已完成
+type: session-summary
+---
+
+# $TITLE
+
+## 摘要
+内容...
+"
+
+# 创建笔记
+obsidian-cli create "Claude Code/$DATE/$TITLE.md" --content "$CONTENT"
+
+echo "✅ 笔记已创建: Claude Code/$DATE/$TITLE.md"
+\`\`\`
+
+## 标签分类
+
+根据工作类型添加标签：
+
+| 标签 | 使用场景 |
+|-----|---------|
+| `#bug修复` | 修复缺陷或问题 |
+| `#新功能` | 实现新特性 |
+| `#重构` | 代码重构或优化 |
+| `#性能优化` | 性能改进 |
+| `#文档` | 文档更新 |
+| `#测试` | 测试相关 |
+| `#配置` | 环境或配置更改 |
+
+## 示例对比
+
+### 示例 1: 单个任务（不应拆分）
+
+**会话内容**：优化数据库查询性能
+
+\`\`\`markdown
+---
+title: 优化数据库查询性能
+date: 2026-03-18
+tags:
+  - claude-session
+  - 性能优化
+status: 已完成
+type: session-summary
+---
+
+# 优化数据库查询性能
+
+## 摘要
+优化了用户列表查询，添加索引并重构查询逻辑，查询时间从 2s 降低到 200ms。
+
+## 问题 / 任务
+用户列表加载缓慢，影响用户体验。
+
+## 解决方案
+1. 添加联合索引
+2. 重构查询逻辑
+3. 添加查询缓存
+
+## 关键成果
+- ✅ 查询时间从 2s 降低到 200m
+- ✅ 数据库负载降低 60%
+
+## 任务列表
+- [x] 分析查询性能瓶颈
+- [x] 添加数据库索引
+- [x] 重构查询逻辑
+- [x] 性能测试验证
+
+## 修改的文件
+- [[servers/api/user.go]]
+- [[models/user_query.go]]
+
+## 相关
+- Git commit: abc123
+\`\`\`
+
+### 示例 2: 多个任务（应拆分）
+
+**会话内容**：修复缓存bug + 实现新功能
+
+**应创建两个文档**：
+
+1. `修复跨服务缓存一致性.md`
+2. `实现 Auxiliary 组队 buff.md`
+
+每个文档包含各自的内容，并通过 `related_tasks` 字段关联。
+
+## 最佳实践
+
+✅ **推荐做法**：
+- 使用具体的、描述性的中文标题
+- **每个独立任务创建单独的文档**
+- 使用 `related_tasks` 字段关联相关任务
+- 保持摘要简洁（2-3句话）
+- 所有文件引用使用 wikilinks：`[[文件路径]]`
+- 添加相关标签便于后续搜索
+- 使用 Tasks 插件语法管理任务列表
+- 利用 Dataview 创建索引和查询
+
+❌ **避免**：
+- 使用通用标题如"会话笔记"
+- **将多个独立任务混在一个文档**
+- 摘要过长或过短
+- 混合中英文内容
+- 忘记添加标签
+- 省略修改的文件列表
+
+## 相关命令
+
+- `/commit` - 创建符合规范的 Git 提交
+- `/obsidian-session` - 保存会话到 Obsidian（当前命令）
+- `obsidian-cli` - Obsidian CLI 工具
+- Templater 插件 - 模板和动态内容生成
+- Tasks 插件 - 任务管理和跟踪
+- Dataview 插件 - 数据查询和索引
+
+## 插件参考
+
+- **Templater**: 使用 `<% %>` 语法动态生成内容
+- **Tasks**: 使用 `- [ ]` 语法创建任务，支持状态和元数据
+- **Dataview**: 使用 `\`\`\`dataview` 代码块查询和展示数据
+
+***
+
+*保存会话笔记，便于知识管理和经验积累。支持多任务拆分，每个任务独立记录。集成 Templater、Tasks、Dataview 插件功能。*

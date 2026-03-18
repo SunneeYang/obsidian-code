@@ -1,0 +1,13 @@
+{
+  "name": "save-session",
+  "version": "1.0.0",
+  "description": "保存 Claude Code 会话摘要到 Obsidian 仓库",
+  "author": "光",
+  "repository": "https://github.com/yourusername/save-session-skill",
+  "keywords": ["obsidian", "session", "save", "claude-code"],
+  "allowed_tools": ["Bash"],
+  "files": [
+    "SKILL.md",
+    "templates/会话笔记模板.md"
+  ]
+}
