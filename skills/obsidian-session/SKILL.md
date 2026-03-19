@@ -1,7 +1,6 @@
 ---
 name: obsidian-session
 description: 基于 transcript 保存 Claude Code 会话到 Obsidian。完整记录不受上下文压缩影响。
-version: 1.1.0
 allowed_tools: ["Bash", "AskUserQuestion", "Read", "Glob", "Write"]
 ---
 
@@ -82,13 +81,34 @@ jq -r 'select(.type == "user") | .message.content' transcript.jsonl
 
 ### 5. 保存
 
-**使用 obsidian-cli（优先）：**
+**使用 Obsidian CLI（优先）：**
 ```bash
-if command -v obsidian-cli &> /dev/null; then
-    # 获取当前日期
+if command -v obsidian &> /dev/null; then
+    # 获取当前日期和 vault 路径
     DATE=$(date +%Y-%m-%d)
-    # 保存到 Claude Code/日期目录/标题.md
-    obsidian-cli create --content "$CONTENT" --vault obsidian "Claude Code/${DATE}/${标题}.md"
+    VAULT_PATH="${OBSIDIAN_DEFAULT_VAULT:-~/Documents/work/obsidian}"
+
+    # 创建文档（Obsidian CLI 官方命令格式）
+    # vault: vault 的完整路径
+    # name: 文件名（如果有空格需要用引号包裹）
+    # path: 相对于 vault 根目录的文件夹路径
+    # content: 文档内容
+    obsidian create \
+        name="$TITLE" \
+        path="Claude Code/${DATE}/" \
+        content="$CONTENT" \
+        vault="$VAULT_PATH"
+
+    # 验证文档是否成功创建
+    FILE_PATH="Claude Code/${DATE}/${TITLE}.md"
+    if [ -f "$VAULT_PATH/$FILE_PATH" ]; then
+        echo "✓ 文档已创建: $FILE_PATH"
+        # 可选：读取文档内容进行确认
+        # obsidian read path="$FILE_PATH" vault="$VAULT_PATH"
+    else
+        echo "✗ 文档创建失败: $FILE_PATH"
+        exit 1
+    fi
 else
     # 直接写入文件
     VAULT_PATH="${OBSIDIAN_DEFAULT_VAULT:-~/Documents/work/obsidian}"
@@ -97,6 +117,12 @@ else
     # 写入文件...
 fi
 ```
+
+**Obsidian CLI 命令格式说明：**
+- `vault=<path>` - vault 的完整文件系统路径
+- `name=<filename>` - 文件名（不含扩展名）
+- `path=<folder>` - 相对于 vault 根目录的文件夹路径（以 `/` 结尾）
+- `content=<text>` - 文档内容（支持 `\n` 换行符）
 
 ### 6. 智能合并（文档已存在）
 
@@ -124,7 +150,7 @@ fi
 | **自动标题** | ✅ 基于完整内容自动生成 |
 | **智能标签** | ✅ 根据内容动态生成标签 |
 | **智能合并** | ✅ 多次调用时智能合并 |
-| **工具兼容** | ✅ 优先 obsidian-cli，自动回退 |
+| **工具兼容** | ✅ 优先 Obsidian CLI，自动回退 |
 
 ## 🎯 最佳实践
 
@@ -186,12 +212,12 @@ fi
 
 **依赖：**
 - 必需：Bash、Read、Write
-- 可选：obsidian-cli（推荐）、jq
+- 可选：Obsidian CLI（推荐）、jq
 
-**回退：** obsidian-cli 未安装 → 直接文件写入
+**回退：** Obsidian CLI 未安装 → 直接文件写入
 
 **相关技能：**
-- `obsidian:obsidian-cli` - Vault 管理和笔记操作（本技能使用）
+- `obsidian:obsidian-cli` - Obsidian 官方 CLI 工具（本技能使用）
 - `obsidian:obsidian-markdown` - Obsidian Flavored Markdown 语法支持（wikilinks、callouts 等）
 - `obsidian:obsidian-bases` - 数据库功能（可用于会话数据统计）
 - `obsidian:json-canvas` - 可视化画布（可用于会话关系图）
@@ -230,10 +256,4 @@ fi
 
 **自动合并：** 更新摘要、添加新方案、追加成果、更新任务状态
 
-## 版本历史
-
-- **1.1.0** (2026-03-19) - 基于完整 transcript 日志
-- **1.0.x** - 初始版本
-
 ---
-
